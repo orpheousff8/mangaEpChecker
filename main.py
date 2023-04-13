@@ -107,7 +107,7 @@ def main():
         if latest_ep > current_ep:
             is_new_ep = True
             print('New ep!')
-            data[i][2] = str(latest_ep)
+            data[i][3] = str(latest_ep)
 
             send_line_notification(config["LINE_TOKEN"], current_ep, latest_ep, manga_name, manga_url)
         else:
