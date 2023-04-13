@@ -1,0 +1,8 @@
+name, url, xpath, latest_ep
+Satanophany,https://www.nekopost.net/manga/4344/,232,231
+Buta no Fukushuu,https://www.nekopost.net/manga/11828/,"//*[@id=""home1""]/div/div/div[2]/div[1]/a[1]/div/b",14
+Maou ni Natta node Dungeon Tsukutte Jingai Musume to Honobono suru,https://www.nekopost.net/manga/7875/,"//*[@id=""home1""]/div/div/div[2]/div[1]/a[1]/div/b",51
+One piece,https://mangaplus.shueisha.co.jp/titles/100079/,"//div[@id=""app""]//main//div/p[2]",1080
+Blue Box,https://mangaplus.shueisha.co.jp/titles/100157/,"//div[@id=""app""]//main//div/p[2]",96
+Chainsaw man,https://mangaplus.shueisha.co.jp/titles/300002/,"//div[@id=""app""]//main//div/p[2]",126
+Make the Exorcise Fall in Love,https://mangaplus.shueisha.co.jp/titles/100198/,"//div[@id=""app""]//main//div/p[2]",36
