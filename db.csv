@@ -1,5 +1,5 @@
 name, url, xpath, latest_ep
-Satanophany,https://www.nekopost.net/manga/4344/,232,231
+Satanophany,https://www.nekopost.net/manga/4344/,"//*[@id=""home1""]/div/div/div[2]/div[1]/a[1]/div/b",232
 Buta no Fukushuu,https://www.nekopost.net/manga/11828/,"//*[@id=""home1""]/div/div/div[2]/div[1]/a[1]/div/b",14
 Maou ni Natta node Dungeon Tsukutte Jingai Musume to Honobono suru,https://www.nekopost.net/manga/7875/,"//*[@id=""home1""]/div/div/div[2]/div[1]/a[1]/div/b",51
 One piece,https://mangaplus.shueisha.co.jp/titles/100079/,"//div[@id=""app""]//main//div/p[2]",1080
