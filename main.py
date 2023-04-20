@@ -13,16 +13,14 @@ from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 
 
-def load_env(filename):
+def load_env(filename) -> dict[str, str | None] | None:
     config = dotenv_values(filename)
 
     config_keys = ('LINE_TOKEN', 'CSV')
 
-    if all(k in config_keys for k in config.keys()):
+    if all(key in config for key in config_keys):
         return config
-
-    print('.env file is invalid. Aborted!')
-    exit()
+    return None
 
 
 def get_latest_ep(manga_url: str, xpath: str, render_seconds: int = 3) -> int:
@@ -47,7 +45,7 @@ def get_latest_ep(manga_url: str, xpath: str, render_seconds: int = 3) -> int:
     except NoSuchElementException:
         print(f'An element of new ep not found')
         driver.close()
-        return -1
+        raise
 
     link_text = elements[-1].get_attribute('innerText')
     print(link_text)
@@ -92,6 +90,10 @@ def send_line_notification(token: str, current_ep: int, latest_ep: int, manga_na
 
 def main():
     config = load_env(os.path.join(sys.path[0], '.env'))
+    if config is None:
+        print('.env file is invalid. Aborted!')
+        exit()
+
     csv_name = config['CSV']
     is_new_ep = False
 
@@ -104,7 +106,11 @@ def main():
         current_ep = int(data[i][3])
 
         print(f'\n{manga_name} is at {manga_url} with current Ep.{current_ep} in DB.')
-        latest_ep = get_latest_ep(manga_url=manga_url, xpath=xpath)
+        try:
+            latest_ep = get_latest_ep(manga_url=manga_url, xpath=xpath)
+        except NoSuchElementException:
+            print('An element of new ep not found')
+            continue
 
         if latest_ep > current_ep:
             is_new_ep = True
