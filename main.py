@@ -4,6 +4,7 @@ import re
 import csv
 import requests
 from dotenv import dotenv_values
+from requests import Response
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.chrome.service import Service as ChromeService
@@ -78,14 +79,15 @@ def write_csv(csv_name, data):
         print("\nDB updated")
 
 
-def send_line_notification(token: str, current_ep: int, latest_ep: int, manga_name: str, manga_url: str):
+def send_line_notification(token: str, current_ep: int, latest_ep: int, manga_name: str, manga_url: str) -> Response:
     print("Sending Line notification")
     payload = {
         'message': f'{manga_name} newer ep.{latest_ep} is out! '
-                   f'Resume your next ep. at {manga_url + str(current_ep + 1)}'}
+                   f'Resume your next ep. at {manga_url}'}
     response = requests.post('https://notify-api.line.me/api/notify',
                              headers={f'Authorization': f'Bearer {token}'}, params=payload)
-    print(response.text)
+
+    return response
 
 
 def main():
@@ -109,11 +111,13 @@ def main():
             print('New ep!')
             data[i][3] = str(latest_ep)
 
-            send_line_notification(config["LINE_TOKEN"], current_ep, latest_ep, manga_name, manga_url)
+            response = send_line_notification(config["LINE_TOKEN"], current_ep, latest_ep, manga_name, manga_url)
+            print(f'{response.status_code}: {response.text}')
         else:
             print('No new ep')
 
     if not is_new_ep:
+        print('/nNo update to DB.')
         exit()
 
     # Open the same CSV file for writing if there is a new ep
