@@ -5,7 +5,7 @@ import csv
 from selenium.common import NoSuchElementException
 from selenium.webdriver.remote.webelement import WebElement
 
-from main import load_env, get_latest_ep, read_csv, write_csv, send_line_notification, main
+from main import load_env, get_latest_ep, read_csv, write_csv, send_line_notification, main, NoNumberInLinkTextException
 
 
 class MyTest(unittest.TestCase):
@@ -74,13 +74,15 @@ class MyTest(unittest.TestCase):
         self.assertEqual(result, 10)
 
     @patch('selenium.webdriver.Chrome')
-    def test_returns_negative_one_when_no_number_found(self, mock_driver):
+    def test_raise_NoNumberInLinkTextException_when_no_number_found(self, mock_driver):
+        # Arrange
         mock_element = MagicMock(spec=WebElement)
         mock_element.get_attribute.return_value = 'Episode X'
         mock_driver().find_elements.return_value = [mock_element]
 
-        result = get_latest_ep('https://example.com', '//xpath')
-        self.assertEqual(result, -1)
+        # Act and Assert
+        with self.assertRaises(NoNumberInLinkTextException):
+            get_latest_ep('https://example.com', '//xpath')
 
     @patch('selenium.webdriver.Chrome')
     def test_closes_driver_when_exception_occurs(self, mock_driver):

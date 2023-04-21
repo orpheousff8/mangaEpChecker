@@ -11,9 +11,14 @@ from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
+from typing import Optional
 
 
-def load_env(filename) -> dict[str, str | None] | None:
+class NoNumberInLinkTextException(Exception):
+    pass
+
+
+def load_env(filename) -> Optional[dict[str, str | None]]:
     config = dotenv_values(filename)
 
     config_keys = ('LINE_TOKEN', 'CSV')
@@ -58,8 +63,7 @@ def get_latest_ep(manga_url: str, xpath: str, render_seconds: int = 3) -> int:
         print(f'Ep.{latest_ep} is the latest Ep on the web.')
         return latest_ep
     else:
-        print("Error: No number found in text")
-        return -1
+        raise NoNumberInLinkTextException
 
 
 def read_csv(csv_name):
@@ -90,7 +94,7 @@ def send_line_notification(token: str, current_ep: int, latest_ep: int, manga_na
 
 def main():
     config = load_env(os.path.join(sys.path[0], '.env'))
-    if config is None:
+    if not config:
         print('.env file is invalid. Aborted!')
         exit()
 
@@ -110,6 +114,9 @@ def main():
             latest_ep = get_latest_ep(manga_url=manga_url, xpath=xpath)
         except NoSuchElementException:
             print('An element of new ep not found')
+            continue
+        except NoNumberInLinkTextException:
+            print("Error: No number found in link text")
             continue
 
         if latest_ep > current_ep:
