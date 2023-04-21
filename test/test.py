@@ -5,7 +5,7 @@ import csv
 from selenium.common import NoSuchElementException
 from selenium.webdriver.remote.webelement import WebElement
 
-from main import load_env, get_latest_ep, read_csv, write_csv, send_line_notification
+from main import load_env, get_latest_ep, read_csv, write_csv, send_line_notification, main
 
 
 class MyTest(unittest.TestCase):
@@ -53,7 +53,7 @@ class MyTest(unittest.TestCase):
 
         self.assertEqual(written_data, data)
 
-    @patch('main.requests.post')
+    @patch('requests.post')
     def test_send_line_notification(self, mock_post):
         # Test send_line_notification function with a mocked requests.post call
         mock_response = MagicMock(status_code=200, text='OK')
@@ -90,6 +90,53 @@ class MyTest(unittest.TestCase):
             get_latest_ep('https://example.com', '//xpath')
 
         mock_driver().close.assert_called_once()
+
+    @patch('builtins.print')
+    @patch('main.load_env')
+    @patch('main.read_csv')
+    @patch('main.get_latest_ep')
+    @patch('main.send_line_notification')
+    @patch('main.write_csv')
+    def test_no_new_ep(self, mock_write_csv, mock_send_line_notification,
+                       mock_get_latest_ep, mock_read_csv, mock_load_env, mock_print):
+        # Arrange
+        mock_load_env.return_value = {'CSV': 'test.csv', 'LINE_TOKEN': 'test_token'}
+        mock_read_csv.return_value = [['Manga', 'http://example.com', '//a', '1']]
+        mock_get_latest_ep.return_value = 1
+
+        # Act and Assert
+        with self.assertRaises(SystemExit) as cm:
+            main()
+
+        self.assertEqual(cm.exception.code, None)
+        mock_write_csv.assert_not_called()
+        mock_send_line_notification.assert_not_called()
+        mock_print.assert_called_with('\nNo update to DB.')
+
+    @patch('builtins.print')
+    @patch('main.load_env')
+    @patch('main.read_csv')
+    @patch('main.get_latest_ep')
+    @patch('main.send_line_notification')
+    @patch('main.write_csv')
+    def test_new_ep(self, mock_write_csv, mock_send_line_notification,
+                    mock_get_latest_ep, mock_read_csv, mock_load_env, mock_print):
+        # Arrange
+        mock_load_env.return_value = {'CSV': 'test.csv', 'LINE_TOKEN': 'test_token'}
+        mock_read_csv.return_value = [['name', 'url', 'xpath', 'latest_ep'],
+                                      ['Manga', 'http://example.com', '//a', '1']]
+        mock_get_latest_ep.return_value = 2
+        mock_send_line_notification.return_value.status_code = 200
+        mock_send_line_notification.return_value.text = 'OK'
+
+        # Act
+        main()
+
+        # Assert
+        mock_write_csv.assert_called_with('test.csv', [['name', 'url', 'xpath', 'latest_ep'],
+                                                       ['Manga', 'http://example.com', '//a', '2']])
+        mock_send_line_notification.assert_called_with('test_token', 1, 2, 'Manga', 'http://example.com')
+        mock_print.assert_called_with('200: OK')
 
 
 if __name__ == '__main__':

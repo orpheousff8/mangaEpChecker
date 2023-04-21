@@ -81,7 +81,7 @@ def send_line_notification(token: str, current_ep: int, latest_ep: int, manga_na
     print("Sending Line notification")
     payload = {
         'message': f'{manga_name} newer ep.{latest_ep} is out! '
-                   f'Resume your next ep. at {manga_url}'}
+                   f'Resume ep.{current_ep + 1} at {manga_url}'}
     response = requests.post('https://notify-api.line.me/api/notify',
                              headers={f'Authorization': f'Bearer {token}'}, params=payload)
 
@@ -123,7 +123,7 @@ def main():
             print('No new ep')
 
     if not is_new_ep:
-        print('/nNo update to DB.')
+        print('\nNo update to DB.')
         exit()
 
     # Open the same CSV file for writing if there is a new ep
