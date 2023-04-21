@@ -28,7 +28,7 @@ def load_env(filename) -> Optional[dict[str, str | None]]:
     return None
 
 
-def get_latest_ep(manga_url: str, xpath: str, render_seconds: int = 3) -> int:
+def get_latest_ep(manga_url: str, xpath: str, render_seconds: int = 3) -> Optional[int]:
     # Run Chrome in headless mode as Neko-post in Client-side rendering
     options = Options()
     options.add_argument("--no-sandbox")
@@ -60,7 +60,6 @@ def get_latest_ep(manga_url: str, xpath: str, render_seconds: int = 3) -> int:
     match = re.search(r'\d+', link_text)
     if match:
         latest_ep = int(match.group())
-        print(f'Ep.{latest_ep} is the latest Ep on the web.')
         return latest_ep
     else:
         raise NoNumberInLinkTextException
@@ -112,6 +111,7 @@ def main():
         print(f'\n{manga_name} is at {manga_url} with current Ep.{current_ep} in DB.')
         try:
             latest_ep = get_latest_ep(manga_url=manga_url, xpath=xpath)
+            print(f'Ep.{latest_ep} is the latest Ep on the web.')
         except NoSuchElementException:
             print('An element of new ep not found')
             continue
