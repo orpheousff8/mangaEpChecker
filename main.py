@@ -12,6 +12,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from typing import Optional
+from bcolors import bcolors
 
 
 class NoNumberInLinkTextException(Exception):
@@ -39,7 +40,7 @@ def get_latest_ep(manga_url: str, xpath: str, render_seconds: int = 3) -> Option
     driver.get(manga_url)
 
     title = driver.title
-    print(title)
+    print(f"{bcolors.HEADER}{title}{bcolors.ENDC}")
 
     # Wait for page to render
     print(f'Waiting for {render_seconds} seconds to render the page.')
@@ -48,12 +49,11 @@ def get_latest_ep(manga_url: str, xpath: str, render_seconds: int = 3) -> Option
     try:
         elements = driver.find_elements(By.XPATH, xpath)
     except NoSuchElementException:
-        print(f'An element of new ep not found')
         driver.close()
         raise
 
     link_text = elements[-1].get_attribute('innerText')
-    print(link_text)
+    # print(link_text)
     driver.close()
 
     # Use a regular expression to extract only the number
@@ -65,7 +65,7 @@ def get_latest_ep(manga_url: str, xpath: str, render_seconds: int = 3) -> Option
         raise NoNumberInLinkTextException
 
 
-def read_csv(csv_name):
+def read_csv(csv_name) -> list[list[str]]:
     # Open the CSV file for reading
     with open(os.path.join(sys.path[0], csv_name), 'r', newline='') as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
@@ -77,7 +77,6 @@ def write_csv(csv_name, data):
     with open(os.path.join(sys.path[0], csv_name), 'w', newline='') as csv_file:
         writer = csv.writer(csv_file)
         writer.writerows(data)
-        print("\nDB updated")
 
 
 def send_line_notification(token: str, current_ep: int, latest_ep: int, manga_name: str, manga_url: str) -> Response:
@@ -94,13 +93,20 @@ def send_line_notification(token: str, current_ep: int, latest_ep: int, manga_na
 def main():
     config = load_env(os.path.join(sys.path[0], '.env'))
     if not config:
-        print('.env file is invalid. Aborted!')
+        print(f'{bcolors.WARNING}.env file is invalid. Aborted!{bcolors.ENDC}')
         exit()
 
     csv_name = config['CSV']
     is_new_ep = False
 
-    data = read_csv(csv_name)
+    try:
+        data = read_csv(csv_name)
+        if not data:
+            print(f'\n{bcolors.WARNING}No Data In CSV. Abort.{bcolors.ENDC}')
+            exit()
+    except Exception as e:
+        print(f"An error occurred while writing to the CSV file: {e}")
+        raise
 
     for i in range(1, len(data)):
         manga_name = data[i][0]
@@ -113,28 +119,33 @@ def main():
             latest_ep = get_latest_ep(manga_url=manga_url, xpath=xpath)
             print(f'Ep.{latest_ep} is the latest Ep on the web.')
         except NoSuchElementException:
-            print('An element of new ep not found')
+            print(f'{bcolors.WARNING}An element of new ep not found{bcolors.ENDC}')
             continue
         except NoNumberInLinkTextException:
-            print("Error: No number found in link text")
+            print(f'{bcolors.WARNING}Error: No number found in link text{bcolors.ENDC}')
             continue
 
         if latest_ep > current_ep:
             is_new_ep = True
-            print('New ep!')
+            print(f'{bcolors.OKGREEN}New ep!{bcolors.ENDC}')
             data[i][3] = str(latest_ep)
 
             response = send_line_notification(config["LINE_TOKEN"], current_ep, latest_ep, manga_name, manga_url)
             print(f'{response.status_code}: {response.text}')
         else:
-            print('No new ep')
+            print(f'{bcolors.OKBLUE}No new ep{bcolors.ENDC}')
 
     if not is_new_ep:
-        print('\nNo update to DB.')
+        print(f'\n{bcolors.OKBLUE}No update to DB.{bcolors.ENDC}')
         exit()
 
     # Open the same CSV file for writing if there is a new ep
-    write_csv(csv_name, data)
+    try:
+        write_csv(csv_name, data)
+        print(f"\n{bcolors.OKGREEN}DB updated{bcolors.ENDC}")
+    except Exception as e:
+        print(f"An error occurred while reading the CSV file: {e}")
+        raise
 
 
 if __name__ == '__main__':

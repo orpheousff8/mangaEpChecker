@@ -1,8 +1,10 @@
 name, url, xpath, latest_ep
-Satanophany,https://www.nekopost.net/manga/4344/,"//*[@id=""home1""]/div/div/div[2]/div[1]/a[1]/div/b",232
-Buta no Fukushuu,https://www.nekopost.net/manga/11828/,"//*[@id=""home1""]/div/div/div[2]/div[1]/a[1]/div/b",14
+Satanophany,https://www.nekopost.net/manga/4344/,"//*[@id=""home1""]/div/div/div[2]/div[1]/a[1]/div/b",233
+Buta no Fukushuu,https://www.nekopost.net/manga/11828/,"//*[@id=""home1""]/div/div/div[2]/div[1]/a[1]/div/b",16
 Maou ni Natta node Dungeon Tsukutte Jingai Musume to Honobono suru,https://www.nekopost.net/manga/7875/,"//*[@id=""home1""]/div/div/div[2]/div[1]/a[1]/div/b",51
-One piece,https://mangaplus.shueisha.co.jp/titles/100079/,"//div[@id=""app""]//main//div/p[2]",1080
-Blue Box,https://mangaplus.shueisha.co.jp/titles/100157/,"//div[@id=""app""]//main//div/p[2]",97
-Chainsaw man,https://mangaplus.shueisha.co.jp/titles/300002/,"//div[@id=""app""]//main//div/p[2]",127
-Make the Exorcise Fall in Love,https://mangaplus.shueisha.co.jp/titles/100198/,"//div[@id=""app""]//main//div/p[2]",37
+One piece,https://mangaplus.shueisha.co.jp/titles/100079/,"//div[@id=""app""]//main//div/p[2]",1084
+Blue Box,https://mangaplus.shueisha.co.jp/titles/100157/,"//div[@id=""app""]//main//div/p[2]",102
+Chainsaw man,https://mangaplus.shueisha.co.jp/titles/300002/,"//div[@id=""app""]//main//div/p[2]",130
+Make the Exorcise Fall in Love,https://mangaplus.shueisha.co.jp/titles/100198/,"//div[@id=""app""]//main//div/p[2]",39
+Isekai Soapland Kaguya,https://www.nekopost.net/manga/10705/,"//*[@id=""home1""]/div/div/div[2]/div[1]/a[1]/div/b",12
+ELDEN RING　The Road to the Erdtree,https://comic-walker.com/contents/detail/KDCW_MF09203324020000_68/,"//*[@id=""reversible""]/li[4]/div/div/span",23

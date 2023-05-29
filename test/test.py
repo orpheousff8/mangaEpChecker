@@ -113,7 +113,7 @@ class MyTest(unittest.TestCase):
         self.assertEqual(cm.exception.code, None)
         mock_write_csv.assert_not_called()
         mock_send_line_notification.assert_not_called()
-        mock_print.assert_called_with('\nNo update to DB.')
+        mock_print.assert_called_with('\n\x1b[94mNo update to DB.\x1b[0m')
 
     @patch('builtins.print')
     @patch('main.load_env')
@@ -138,7 +138,7 @@ class MyTest(unittest.TestCase):
         mock_write_csv.assert_called_with('test.csv', [['name', 'url', 'xpath', 'latest_ep'],
                                                        ['Manga', 'http://example.com', '//a', '2']])
         mock_send_line_notification.assert_called_with('test_token', 1, 2, 'Manga', 'http://example.com')
-        mock_print.assert_called_with('200: OK')
+        mock_print.assert_called_with('\n\x1b[92mDB updated\x1b[0m')
 
 
 if __name__ == '__main__':
