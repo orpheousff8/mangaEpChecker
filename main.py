@@ -8,6 +8,7 @@ from requests import Response
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
@@ -16,6 +17,10 @@ from bcolors import bcolors
 
 
 class NoNumberInLinkTextException(Exception):
+    pass
+
+
+class NoElementsException(Exception):
     pass
 
 
@@ -30,13 +35,12 @@ def load_env(filename) -> Optional[dict[str, str | None]]:
 
 
 def get_latest_ep(manga_url: str, xpath: str, render_seconds: int = 3) -> Optional[int]:
-    # Run Chrome in headless mode as Neko-post in Client-side rendering
+    # Run Chrome in headless mode as Neko-post is Client-side rendering
     options = Options()
     options.add_argument("--no-sandbox")
     options.add_argument('--headless=new')
     options.add_argument("--disable-gpu")
     driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
-
     driver.get(manga_url)
 
     title = driver.title
@@ -48,6 +52,9 @@ def get_latest_ep(manga_url: str, xpath: str, render_seconds: int = 3) -> Option
 
     try:
         elements = driver.find_elements(By.XPATH, xpath)
+        if len(elements) == 0:
+            driver.close()
+            raise NoElementsException
     except NoSuchElementException:
         driver.close()
         raise
@@ -123,6 +130,9 @@ def main():
             continue
         except NoNumberInLinkTextException:
             print(f'{bcolors.WARNING}Error: No number found in link text{bcolors.ENDC}')
+            continue
+        except NoElementsException:
+            print(f'{bcolors.WARNING}Error: Elements are empty. Need to check page or XPATH{bcolors.ENDC}')
             continue
 
         if latest_ep > current_ep:

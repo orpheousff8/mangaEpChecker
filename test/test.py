@@ -4,11 +4,14 @@ import os
 import csv
 from selenium.common import NoSuchElementException
 from selenium.webdriver.remote.webelement import WebElement
+from selenium.webdriver.chrome.webdriver import WebDriver
 
-from main import load_env, get_latest_ep, read_csv, write_csv, send_line_notification, main, NoNumberInLinkTextException
+from main import load_env, get_latest_ep, read_csv, write_csv, send_line_notification, main, \
+    NoNumberInLinkTextException
 
 
 class MyTest(unittest.TestCase):
+    driver = None
     CSV_DATA = [['name', 'url', 'xpath', 'latest_ep'],
                 ['Manga 1', 'http://manga.com', '//a', '1'],
                 ['Manga 2', 'http://manga2.com', '//div', '2']]
