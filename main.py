@@ -8,7 +8,6 @@ from requests import Response
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.chrome.service import Service as ChromeService
-from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
@@ -104,7 +103,7 @@ def main():
         exit()
 
     csv_name = config['CSV']
-    is_new_ep = False
+    new_ep_list = []
 
     try:
         data = read_csv(csv_name)
@@ -136,7 +135,7 @@ def main():
             continue
 
         if latest_ep > current_ep:
-            is_new_ep = True
+            new_ep_list.append((manga_name, manga_url, current_ep + 1))
             print(f'{bcolors.OKGREEN}New ep!{bcolors.ENDC}')
             data[i][3] = str(latest_ep)
 
@@ -145,7 +144,7 @@ def main():
         else:
             print(f'{bcolors.OKBLUE}No new ep{bcolors.ENDC}')
 
-    if not is_new_ep:
+    if len(new_ep_list) == 0:
         print(f'\n{bcolors.OKBLUE}No update to DB.{bcolors.ENDC}')
         exit()
 
@@ -156,6 +155,13 @@ def main():
     except Exception as e:
         print(f"An error occurred while reading the CSV file: {e}")
         raise
+
+    for i in range(0, len(new_ep_list)):
+        manga_name = new_ep_list[i][0]
+        manga_url = new_ep_list[i][1]
+        next_ep = new_ep_list[i][2]
+
+        print(f'\n{bcolors.OKBLUE}{manga_name}{bcolors.ENDC} is at {manga_url} with next Ep. is {next_ep}')
 
 
 if __name__ == '__main__':

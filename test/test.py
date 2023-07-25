@@ -4,8 +4,8 @@ import os
 import csv
 from selenium.common import NoSuchElementException
 from selenium.webdriver.remote.webelement import WebElement
-from selenium.webdriver.chrome.webdriver import WebDriver
 
+from bcolors import bcolors
 from main import load_env, get_latest_ep, read_csv, write_csv, send_line_notification, main, \
     NoNumberInLinkTextException
 
@@ -116,7 +116,7 @@ class MyTest(unittest.TestCase):
         self.assertEqual(cm.exception.code, None)
         mock_write_csv.assert_not_called()
         mock_send_line_notification.assert_not_called()
-        mock_print.assert_called_with('\n\x1b[94mNo update to DB.\x1b[0m')
+        mock_print.assert_called_with(f'\n{bcolors.OKBLUE}No update to DB.{bcolors.ENDC}')
 
     @patch('builtins.print')
     @patch('main.load_env')
@@ -138,10 +138,32 @@ class MyTest(unittest.TestCase):
         main()
 
         # Assert
+
+        # Get the calls made to the mocked print function
+        calls = mock_print.mock_calls
+
+        # Define the expected lines of output
+        expected_output = [
+            f'\nManga is at http://example.com with current Ep.1 in DB.',
+            f'Ep.2 is the latest Ep on the web.',
+            f'{bcolors.OKGREEN}New ep!{bcolors.ENDC}',
+            f'200: OK',
+            f'\n{bcolors.OKGREEN}DB updated{bcolors.ENDC}',
+            f'\n{bcolors.OKBLUE}Manga{bcolors.ENDC} is at http://example.com with next Ep. is 2'
+        ]
+
         mock_write_csv.assert_called_with('test.csv', [['name', 'url', 'xpath', 'latest_ep'],
                                                        ['Manga', 'http://example.com', '//a', '2']])
+
         mock_send_line_notification.assert_called_with('test_token', 1, 2, 'Manga', 'http://example.com')
-        mock_print.assert_called_with('\n\x1b[92mDB updated\x1b[0m')
+
+        # Assert that the printed lines match the expected output
+        self.assertEqual(len(calls), len(expected_output), "Number of printed lines doesn't match")
+
+        for call, expected_line in zip(calls, expected_output):
+            _, args, _ = call
+            printed_line = args[0]
+            self.assertEqual(printed_line, expected_line)
 
 
 if __name__ == '__main__':
