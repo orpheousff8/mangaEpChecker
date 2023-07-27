@@ -39,7 +39,9 @@ def get_latest_ep(manga_url: str, xpath: str, render_seconds: int = 3) -> Option
     options.add_argument("--no-sandbox")
     options.add_argument('--headless=new')
     options.add_argument("--disable-gpu")
-    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager(driver_version='114.0.5735.90').install()),
+                              options=options)
+    # driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install())) , options=options)
     driver.get(manga_url)
 
     title = driver.title
