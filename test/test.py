@@ -62,7 +62,7 @@ class MyTest(unittest.TestCase):
         mock_response = MagicMock(status_code=200, text='OK')
         mock_post.return_value = mock_response
 
-        response = send_line_notification(token='TOKEN', current_ep=1, latest_ep=2, manga_name='Manga',
+        response = send_line_notification(token='TOKEN', current_ep='1', latest_ep='2', manga_name='Manga',
                                           manga_url='http://manga.com')
 
         self.assertEqual(response, mock_response)
@@ -129,8 +129,8 @@ class MyTest(unittest.TestCase):
         # Arrange
         mock_load_env.return_value = {'CSV': 'test.csv', 'LINE_TOKEN': 'test_token'}
         mock_read_csv.return_value = [['name', 'url', 'xpath', 'latest_ep'],
-                                      ['Manga', 'http://example.com', '//a', '1']]
-        mock_get_latest_ep.return_value = 2
+                                      ['Manga', 'http://example.com', '//a', '1.0']]
+        mock_get_latest_ep.return_value = 2.0
         mock_send_line_notification.return_value.status_code = 200
         mock_send_line_notification.return_value.text = 'OK'
 
@@ -144,18 +144,18 @@ class MyTest(unittest.TestCase):
 
         # Define the expected lines of output
         expected_output = [
-            f'\nManga is at http://example.com with current Ep.1 in DB.',
-            f'Ep.2 is the latest Ep on the web.',
+            f'\nManga is at http://example.com, with current Ep.1 in DB',
+            f'Ep.2 is the latest Ep on the web',
             f'{bcolors.OKGREEN}New ep!{bcolors.ENDC}',
-            f'200: OK',
+            f'Line notification status: 200: OK',
             f'\n{bcolors.OKGREEN}DB updated{bcolors.ENDC}',
-            f'\n{bcolors.OKBLUE}Manga{bcolors.ENDC} is at http://example.com with next Ep. is 2'
+            f'{bcolors.OKBLUE}Manga{bcolors.ENDC} is at http://example.com, last read at Ep.1, latest at Ep.2'
         ]
 
         mock_write_csv.assert_called_with('test.csv', [['name', 'url', 'xpath', 'latest_ep'],
-                                                       ['Manga', 'http://example.com', '//a', '2']])
+                                                       ['Manga', 'http://example.com', '//a', '2.0']])
 
-        mock_send_line_notification.assert_called_with('test_token', 1, 2, 'Manga', 'http://example.com')
+        mock_send_line_notification.assert_called_with('test_token', '1', '2', 'Manga', 'http://example.com')
 
         # Assert that the printed lines match the expected output
         self.assertEqual(len(calls), len(expected_output), "Number of printed lines doesn't match")

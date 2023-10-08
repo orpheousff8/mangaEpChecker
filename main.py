@@ -126,7 +126,7 @@ def main():
             print(f'\n{bcolors.WARNING}No Data In CSV. Abort.{bcolors.ENDC}')
             exit()
     except Exception as e:
-        print(f"An error occurred while writing to the CSV file: {e}")
+        print(f"An error occurred while reading to the CSV file: {e}")
         raise
 
     for i in range(1, len(data)):
@@ -135,10 +135,10 @@ def main():
         xpath = data[i][2]
         current_ep = float(data[i][3])
 
-        print(f'\n{manga_name} is at {manga_url} with current Ep.{float_to_str(current_ep)} in DB.')
+        print(f'\n{manga_name} is at {manga_url}, with current Ep.{float_to_str(current_ep)} in DB')
         try:
             latest_ep = get_latest_ep(manga_url=manga_url, xpath=xpath)
-            print(f'Ep.{float_to_str(latest_ep)} is the latest Ep on the web.')
+            print(f'Ep.{float_to_str(latest_ep)} is the latest Ep on the web')
         except NoSuchElementException:
             print(f'{bcolors.WARNING}An element of new ep not found{bcolors.ENDC}')
             continue
@@ -156,7 +156,7 @@ def main():
 
             response = send_line_notification(config["LINE_TOKEN"], float_to_str(current_ep), float_to_str(latest_ep),
                                               manga_name, manga_url)
-            print(f'{response.status_code}: {response.text}')
+            print(f'Line notification status: {response.status_code}: {response.text}')
         else:
             print(f'{bcolors.OKBLUE}No new ep{bcolors.ENDC}')
 
@@ -169,7 +169,7 @@ def main():
         write_csv(csv_name, data)
         print(f"\n{bcolors.OKGREEN}DB updated{bcolors.ENDC}")
     except Exception as e:
-        print(f"An error occurred while reading the CSV file: {e}")
+        print(f"An error occurred while writing the CSV file: {e}")
         raise
 
     for i in range(0, len(new_ep_list)):
@@ -179,7 +179,7 @@ def main():
         latest_ep = float_to_str(new_ep_list[i][3])
 
         print(
-            f'{bcolors.OKBLUE}{manga_name}{bcolors.ENDC} is at {manga_url}, last read at Ep. {current_ep}, latest Ep. at {latest_ep}')
+            f'{bcolors.OKBLUE}{manga_name}{bcolors.ENDC} is at {manga_url}, last read at Ep.{current_ep}, latest at Ep.{latest_ep}')
 
 
 if __name__ == '__main__':
