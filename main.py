@@ -33,15 +33,17 @@ def load_env(filename) -> Optional[dict[str, str | None]]:
     return None
 
 
-def get_latest_ep(manga_url: str, xpath: str, render_seconds: int = 3) -> Optional[int]:
+def get_latest_ep(manga_url: str, xpath: str, render_seconds: int = 3) -> Optional[float]:
     # Run Chrome in headless mode as Neko-post is Client-side rendering
     options = Options()
     options.add_argument("--no-sandbox")
     options.add_argument('--headless=new')
     options.add_argument("--disable-gpu")
-    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager(driver_version='114.0.5735.90').install()),
-                              options=options)
-    # driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install())) , options=options)
+    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager(
+        latest_release_url='https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json',
+        driver_version='116.0.5845.96').install()), options=options)
+    # driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+
     driver.get(manga_url)
 
     title = driver.title
@@ -60,20 +62,24 @@ def get_latest_ep(manga_url: str, xpath: str, render_seconds: int = 3) -> Option
         driver.close()
         raise
 
-    link_text = elements[-1].get_attribute('innerText')
-    # print(link_text)
+    # need to find both first and last because the order is either ASC or DSC depends on website
+    link_text1 = elements[0].get_attribute('innerText')
+    link_text2 = elements[-1].get_attribute('innerText')
+    # print(link_text1)
+    # print(link_text2)
     driver.close()
 
     # Use a regular expression to extract only the number
-    match = re.search(r'\d+', link_text)
-    if match:
-        latest_ep = int(match.group())
+    match1 = re.search(r'\d+(\.\d+)?', link_text1)
+    match2 = re.search(r'\d+(\.\d+)?', link_text2)
+    if match1 or match2:
+        latest_ep = max(float(match1.group()), float(match2.group()))
         return latest_ep
     else:
         raise NoNumberInLinkTextException
 
 
-def read_csv(csv_name) -> list[list[str]]:
+def read_csv(csv_name: str) -> list[list[str]]:
     # Open the CSV file for reading
     with open(os.path.join(sys.path[0], csv_name), 'r', newline='') as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
@@ -81,17 +87,24 @@ def read_csv(csv_name) -> list[list[str]]:
     return data
 
 
-def write_csv(csv_name, data):
+def write_csv(csv_name: str, data):
     with open(os.path.join(sys.path[0], csv_name), 'w', newline='') as csv_file:
         writer = csv.writer(csv_file)
         writer.writerows(data)
 
 
-def send_line_notification(token: str, current_ep: int, latest_ep: int, manga_name: str, manga_url: str) -> Response:
+def float_to_str(num: float) -> str:
+    int_num = int(num)
+    if num == int_num:
+        return str(int_num)
+    return str(num)
+
+
+def send_line_notification(token: str, current_ep: str, latest_ep: str, manga_name: str, manga_url: str) -> Response:
     print("Sending Line notification")
     payload = {
         'message': f'{manga_name} newer ep.{latest_ep} is out! '
-                   f'Resume ep.{current_ep + 1} at {manga_url}'}
+                   f'Last read Ep.{current_ep} at {manga_url}'}
     response = requests.post('https://notify-api.line.me/api/notify',
                              headers={f'Authorization': f'Bearer {token}'}, params=payload)
 
@@ -120,12 +133,12 @@ def main():
         manga_name = data[i][0]
         manga_url = data[i][1]
         xpath = data[i][2]
-        current_ep = int(data[i][3])
+        current_ep = float(data[i][3])
 
-        print(f'\n{manga_name} is at {manga_url} with current Ep.{current_ep} in DB.')
+        print(f'\n{manga_name} is at {manga_url} with current Ep.{float_to_str(current_ep)} in DB.')
         try:
             latest_ep = get_latest_ep(manga_url=manga_url, xpath=xpath)
-            print(f'Ep.{latest_ep} is the latest Ep on the web.')
+            print(f'Ep.{float_to_str(latest_ep)} is the latest Ep on the web.')
         except NoSuchElementException:
             print(f'{bcolors.WARNING}An element of new ep not found{bcolors.ENDC}')
             continue
@@ -137,11 +150,12 @@ def main():
             continue
 
         if latest_ep > current_ep:
-            new_ep_list.append((manga_name, manga_url, current_ep + 1))
+            new_ep_list.append((manga_name, manga_url, current_ep, latest_ep))
             print(f'{bcolors.OKGREEN}New ep!{bcolors.ENDC}')
             data[i][3] = str(latest_ep)
 
-            response = send_line_notification(config["LINE_TOKEN"], current_ep, latest_ep, manga_name, manga_url)
+            response = send_line_notification(config["LINE_TOKEN"], float_to_str(current_ep), float_to_str(latest_ep),
+                                              manga_name, manga_url)
             print(f'{response.status_code}: {response.text}')
         else:
             print(f'{bcolors.OKBLUE}No new ep{bcolors.ENDC}')
@@ -161,9 +175,11 @@ def main():
     for i in range(0, len(new_ep_list)):
         manga_name = new_ep_list[i][0]
         manga_url = new_ep_list[i][1]
-        next_ep = new_ep_list[i][2]
+        current_ep = float_to_str(new_ep_list[i][2])
+        latest_ep = float_to_str(new_ep_list[i][3])
 
-        print(f'\n{bcolors.OKBLUE}{manga_name}{bcolors.ENDC} is at {manga_url} with next Ep. is {next_ep}')
+        print(
+            f'{bcolors.OKBLUE}{manga_name}{bcolors.ENDC} is at {manga_url}, last read at Ep. {current_ep}, latest Ep. at {latest_ep}')
 
 
 if __name__ == '__main__':
