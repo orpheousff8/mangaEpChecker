@@ -5,7 +5,7 @@ import csv
 import requests
 from dotenv import dotenv_values
 from requests import Response
-from selenium import webdriver
+from selenium.webdriver import Chrome
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.common.by import By
@@ -23,27 +23,16 @@ class NoElementsException(Exception):
     pass
 
 
-def load_env(filename) -> Optional[dict[str, str | None]]:
+def load_env(filename: str, config_keys: tuple) -> Optional[dict[str, str | None]]:
     config = dotenv_values(filename)
-
-    config_keys = ('LINE_TOKEN', 'CSV')
 
     if all(key in config for key in config_keys):
         return config
     return None
 
 
-def get_latest_ep(manga_url: str, xpath: str, render_seconds: int = 3) -> Optional[float]:
-    # Run Chrome in headless mode as Neko-post is Client-side rendering
-    options = Options()
-    options.add_argument("--no-sandbox")
-    options.add_argument('--headless=new')
-    options.add_argument("--disable-gpu")
-    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager(
-        latest_release_url='https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json',
-        driver_version='116.0.5845.96').install()), options=options)
-    # driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
-
+def get_latest_ep(manga_url: str, xpath: str, driver: Chrome, render_seconds: int = 3) -> \
+        Optional[float]:
     driver.get(manga_url)
 
     title = driver.title
@@ -65,16 +54,17 @@ def get_latest_ep(manga_url: str, xpath: str, render_seconds: int = 3) -> Option
     # need to find both first and last because the order is either ASC or DSC depends on website
     link_text1 = elements[0].get_attribute('innerText')
     link_text2 = elements[-1].get_attribute('innerText')
-    # print(link_text1)
-    # print(link_text2)
     driver.close()
 
     # Use a regular expression to extract only the number
     match1 = re.search(r'\d+(\.\d+)?', link_text1)
     match2 = re.search(r'\d+(\.\d+)?', link_text2)
-    if match1 or match2:
-        latest_ep = max(float(match1.group()), float(match2.group()))
-        return latest_ep
+    if match1 and match2:
+        return max(float(match1.group()), float(match2.group()))
+    if match1:
+        return float(match1.group())
+    if match2:
+        return float(match2.group())
     else:
         raise NoNumberInLinkTextException
 
@@ -111,10 +101,35 @@ def send_line_notification(token: str, current_ep: str, latest_ep: str, manga_na
     return response
 
 
+def fetch_driver_version(latest_release_url: str) -> Optional[str]:
+    response = requests.get(latest_release_url)
+    if response.status_code == 200:
+        json_data = response.json()
+        try:
+            return json_data['channels']['Stable']['version']
+        except Exception as e:
+            print(f"An error occurred while reading json data: {e}")
+            raise
+
+
+def create_chrome_driver(driver_version, config, options):
+    service = ChromeService(ChromeDriverManager(
+        latest_release_url=config['LATEST_RELEASE_URL'],
+        driver_version=driver_version).install())
+    return Chrome(service=service, options=options)
+
+
 def main():
-    config = load_env(os.path.join(sys.path[0], '.env'))
+    CONFIG_KEYS = ('CSV', 'LATEST_RELEASE_URL', 'LINE_TOKEN')
+
+    config = load_env(filename=os.path.join(sys.path[0], '.env'), config_keys=CONFIG_KEYS)
     if not config:
         print(f'{bcolors.WARNING}.env file is invalid. Aborted!{bcolors.ENDC}')
+        exit()
+
+    driver_version = fetch_driver_version(config['LATEST_RELEASE_URL'])
+    if not driver_version:
+        print(f'{bcolors.WARNING}Cannot find Chrome Driver version. Aborted!{bcolors.ENDC}')
         exit()
 
     csv_name = config['CSV']
@@ -129,6 +144,11 @@ def main():
         print(f"An error occurred while reading to the CSV file: {e}")
         raise
 
+    options = Options()
+    options.add_argument("--no-sandbox")
+    options.add_argument('--headless=new')
+    options.add_argument("--disable-gpu")
+
     for i in range(1, len(data)):
         manga_name = data[i][0]
         manga_url = data[i][1]
@@ -137,7 +157,8 @@ def main():
 
         print(f'\n{manga_name} is at {manga_url}, with current Ep.{float_to_str(current_ep)} in DB')
         try:
-            latest_ep = get_latest_ep(manga_url=manga_url, xpath=xpath)
+            driver = create_chrome_driver(driver_version=driver_version, config=config, options=options)
+            latest_ep = get_latest_ep(manga_url=manga_url, xpath=xpath, driver=driver)
             print(f'Ep.{float_to_str(latest_ep)} is the latest Ep on the web')
         except NoSuchElementException:
             print(f'{bcolors.WARNING}An element of new ep not found{bcolors.ENDC}')
