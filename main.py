@@ -13,6 +13,7 @@ from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from typing import Optional
 from bcolors import bcolors
+from concurrent import futures
 
 
 class NoNumberInLinkTextException(Exception):
@@ -31,8 +32,14 @@ def load_env(filename: str, config_keys: tuple) -> Optional[dict[str, str | None
     return None
 
 
-def get_latest_ep(manga_url: str, xpath: str, driver: Chrome, render_seconds: int = 3) -> \
+# def get_latest_ep(manga_url: str, xpath: str, driver: Chrome, render_seconds: int = 3) -> \
+#         Optional[float]:
+def get_latest_ep(parameters_dict, render_seconds: int = 3) -> \
         Optional[float]:
+    manga_url: str = parameters_dict["manga_url"]
+    xpath: str = parameters_dict["xpath"]
+    driver: Chrome = parameters_dict["driver"]
+
     driver.get(manga_url)
 
     title = driver.title
@@ -112,13 +119,6 @@ def fetch_driver_version(latest_release_url: str) -> Optional[str]:
             raise
 
 
-def create_chrome_driver(driver_version, config, options):
-    service = ChromeService(ChromeDriverManager(
-        latest_release_url=config['LATEST_RELEASE_URL'],
-        driver_version=driver_version).install())
-    return Chrome(service=service, options=options)
-
-
 def main():
     CONFIG_KEYS = ('CSV', 'LATEST_RELEASE_URL', 'LINE_TOKEN')
 
@@ -127,6 +127,7 @@ def main():
         print(f'{bcolors.WARNING}.env file is invalid. Aborted!{bcolors.ENDC}')
         exit()
 
+    print("Fetching latest Chrome driver version...")
     driver_version = fetch_driver_version(config['LATEST_RELEASE_URL'])
     if not driver_version:
         print(f'{bcolors.WARNING}Cannot find Chrome Driver version. Aborted!{bcolors.ENDC}')
@@ -149,37 +150,72 @@ def main():
     options.add_argument('--headless=new')
     options.add_argument("--disable-gpu")
 
+    print("Initialising Chrome Service...")
+    service = ChromeService(ChromeDriverManager(
+        latest_release_url=config['LATEST_RELEASE_URL'],
+        driver_version=driver_version).install())
+    print("Chrome Service Driver ready.")
+
+    #     manga_name = data[i][0]
+    #     manga_url = data[i][1]
+    #     xpath = data[i][2]
+    #     current_ep = float(data[i][3])
+
+    get_latest_ep_params_list = []
+    # start from 1 to skip CSV header
     for i in range(1, len(data)):
-        manga_name = data[i][0]
-        manga_url = data[i][1]
-        xpath = data[i][2]
-        current_ep = float(data[i][3])
+        # create separate Chrome driver instance
+        driver = Chrome(service=service, options=options)
+        get_latest_ep_params_list.append(
+            {"manga_url": data[i][1], "xpath": data[i][2], "driver": driver})
 
-        print(f'\n{manga_name} is at {manga_url}, with current Ep.{float_to_str(current_ep)} in DB')
-        try:
-            driver = create_chrome_driver(driver_version=driver_version, config=config, options=options)
-            latest_ep = get_latest_ep(manga_url=manga_url, xpath=xpath, driver=driver)
-            print(f'Ep.{float_to_str(latest_ep)} is the latest Ep on the web')
-        except NoSuchElementException:
-            print(f'{bcolors.WARNING}An element of new ep not found{bcolors.ENDC}')
-            continue
-        except NoNumberInLinkTextException:
-            print(f'{bcolors.WARNING}Error: No number found in link text{bcolors.ENDC}')
-            continue
-        except NoElementsException:
-            print(f'{bcolors.WARNING}Error: Elements are empty. Need to check page or XPATH{bcolors.ENDC}')
-            continue
+    with futures.ThreadPoolExecutor() as executor:
+        latest_ep_list = list(executor.map(get_latest_ep, get_latest_ep_params_list))
 
-        if latest_ep > current_ep:
-            new_ep_list.append((manga_name, manga_url, current_ep, latest_ep))
-            print(f'{bcolors.OKGREEN}New ep!{bcolors.ENDC}')
-            data[i][3] = str(latest_ep)
+    send_line_notification_params_list = []
+    for i in range(0, len(latest_ep_list)):
+        if latest_ep_list[i] > float(data[i+1][3]):
+            new_ep_list.append((data[i+1][0], data[i+1][1], float(data[i+1][3]), latest_ep_list[i]))
+            data[i+1][3] = str(latest_ep_list[i])
+            send_line_notification_params_list.append(
+                {"config": config["LINE_TOKEN"], "current_ep": data[i+1][3], "latest_ep": str(latest_ep_list[i]),
+                 "manga_name": data[i+1][0], "manga_url": data[i+1][1]})
 
-            response = send_line_notification(config["LINE_TOKEN"], float_to_str(current_ep), float_to_str(latest_ep),
-                                              manga_name, manga_url)
-            print(f'Line notification status: {response.status_code}: {response.text}')
-        else:
-            print(f'{bcolors.OKBLUE}No new ep{bcolors.ENDC}')
+    if len(send_line_notification_params_list) > 0:
+        with futures.ThreadPoolExecutor() as executor:
+            executor.map(send_line_notification, send_line_notification_params_list)
+
+    # for i in range(1, len(data)):
+    #     manga_name = data[i][0]
+    #     manga_url = data[i][1]
+    #     xpath = data[i][2]
+    #     current_ep = float(data[i][3])
+    #
+    #     print(f'\n{manga_name} is at {manga_url}, with current Ep.{float_to_str(current_ep)} in DB')
+    #     try:
+    #         driver = create_chrome_driver(driver_version=driver_version, config=config, options=options)
+    #         latest_ep = get_latest_ep(manga_url=manga_url, xpath=xpath, driver=driver)
+    #         print(f'Ep.{float_to_str(latest_ep)} is the latest Ep on the web')
+    #     except NoSuchElementException:
+    #         print(f'{bcolors.WARNING}An element of new ep not found{bcolors.ENDC}')
+    #         continue
+    #     except NoNumberInLinkTextException:
+    #         print(f'{bcolors.WARNING}Error: No number found in link text{bcolors.ENDC}')
+    #         continue
+    #     except NoElementsException:
+    #         print(f'{bcolors.WARNING}Error: Elements are empty. Need to check page or XPATH{bcolors.ENDC}')
+    #         continue
+    #
+    #     if latest_ep > current_ep:
+    #         new_ep_list.append((manga_name, manga_url, current_ep, latest_ep))
+    #         print(f'{bcolors.OKGREEN}New ep!{bcolors.ENDC}')
+    #         data[i][3] = str(latest_ep)
+    #
+    #         response = send_line_notification(config["LINE_TOKEN"], float_to_str(current_ep), float_to_str(latest_ep),
+    #                                           manga_name, manga_url)
+    #         print(f'Line notification status: {response.status_code}: {response.text}')
+    #     else:
+    #         print(f'{bcolors.OKBLUE}No new ep{bcolors.ENDC}')
 
     if len(new_ep_list) == 0:
         print(f'\n{bcolors.OKBLUE}No update to DB.{bcolors.ENDC}')

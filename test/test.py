@@ -5,9 +5,12 @@ import csv
 from selenium.common import NoSuchElementException
 from selenium.webdriver import Chrome
 from selenium.webdriver.remote.webelement import WebElement
+from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
+
 from bcolors import bcolors
-from main import load_env, fetch_driver_version, get_latest_ep, read_csv, write_csv, send_line_notification, \
-    create_chrome_driver, main, \
+from main import load_env, fetch_driver_version, get_latest_ep, read_csv, write_csv, send_line_notification,  main, \
     NoNumberInLinkTextException, NoElementsException
 
 
@@ -105,13 +108,16 @@ class MyTest(unittest.TestCase):
         config = {
             'LATEST_RELEASE_URL': 'https://example.com/latest_release'
         }
-        options = {}  # Add appropriate options here
+        options = Options()
         driver_version = '1.0'
 
         # Mock the ChromeDriverManager to avoid actual installation during tests
 
         mock_install.return_value = 'path_to_chromedriver'
-        driver = create_chrome_driver(driver_version, config, options)
+        service = ChromeService(ChromeDriverManager(
+            latest_release_url=config['LATEST_RELEASE_URL'],
+            driver_version=driver_version).install())
+        driver = Chrome(service=service, options=options)
         self.assertIsInstance(driver, Chrome)
         mock_install.assert_called_once_with()
 
@@ -125,7 +131,9 @@ class MyTest(unittest.TestCase):
         mock_element2.get_attribute.return_value = "Chapter 2.0"
         mock_driver.find_elements.return_value = [mock_element1, mock_element2]
 
-        result = get_latest_ep("https://example.com", "//xpath", mock_driver)
+        get_latest_ep_parameters = {"manga_url": "https://example.com", "xpath": "//xpath", "driver": mock_driver}
+
+        result = get_latest_ep(parameters_dict=get_latest_ep_parameters)
         self.assertEqual(result, 2.0)
 
     def test_valid_elements_desc_order(self):
@@ -138,15 +146,19 @@ class MyTest(unittest.TestCase):
         mock_element2.get_attribute.return_value = "Chapter 1.5"
         mock_driver.find_elements.return_value = [mock_element1, mock_element2]
 
-        result = get_latest_ep("https://example.com", "//xpath", mock_driver)
+        get_latest_ep_parameters = {"manga_url": "https://example.com", "xpath": "//xpath", "driver": mock_driver}
+
+        result = get_latest_ep(parameters_dict=get_latest_ep_parameters)
         self.assertEqual(result, 2.0)
 
     def test_no_elements(self):
         mock_driver = MagicMock(spec=Chrome)
         mock_driver.find_elements.return_value = []
 
+        get_latest_ep_parameters = {"manga_url": "https://example.com", "xpath": "//xpath", "driver": mock_driver}
+
         with self.assertRaises(NoElementsException):
-            get_latest_ep("https://example.com", "//xpath", mock_driver)
+            get_latest_ep(parameters_dict=get_latest_ep_parameters)
 
     def test_no_number_in_link_text(self):
         mock_driver = MagicMock(spec=Chrome)
@@ -154,15 +166,19 @@ class MyTest(unittest.TestCase):
         mock_element.get_attribute.return_value = "Chapter No Number"
         mock_driver.find_elements.return_value = [mock_element]
 
+        get_latest_ep_parameters = {"manga_url": "https://example.com", "xpath": "//xpath", "driver": mock_driver}
+
         with self.assertRaises(NoNumberInLinkTextException):
-            get_latest_ep("https://example.com", "//xpath", mock_driver)
+            get_latest_ep(parameters_dict=get_latest_ep_parameters)
 
     def test_selenium_no_such_element_exception(self):
         mock_driver = MagicMock(spec=Chrome)
         mock_driver.find_elements.side_effect = NoSuchElementException
 
+        get_latest_ep_parameters = {"manga_url": "https://example.com", "xpath": "//xpath", "driver": mock_driver}
+
         with self.assertRaises(NoSuchElementException):
-            get_latest_ep("https://example.com", "//xpath", mock_driver)
+            get_latest_ep(parameters_dict=get_latest_ep_parameters)
 
     @unittest.skip("skip test no new ep")
     @patch('main.write_csv')
